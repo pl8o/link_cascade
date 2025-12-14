@@ -28,12 +28,12 @@
 // LINK DEFINITIONS (EDIT THESE)
 // ======================================================
 const LINKS = [
-    { title: "Home",      url: "https://example.com/home" },
-    { title: "About",     url: "https://example.com/about" },
-    { title: "Services",  url: "https://example.com/services" },
-    { title: "Portfolio", url: "https://example.com/portfolio" },
-    { title: "Blog",      url: "https://example.com/blog" },
-    { title: "Contact",   url: "https://example.com/contact" }
+    { title: "Home",      url: "https://pl8o.github.io/the_matrix/" },
+    { title: "About",     url: "https://pl8o.github.io/the_matrix/" },
+    { title: "Services",  url: "https://pl8o.github.io/storm_chasers/" },
+    { title: "Portfolio", url: "https://pl8o.github.io/handmade_websites/" },
+    { title: "Blog",      url: "https://pl8o.github.io/ufo/"  },
+    { title: "Contact",   url: "https://pl8o.github.io/the_bering_sea/" }
 ];
 
 // ======================================================
@@ -213,7 +213,7 @@ function drawBalls() {
 canvas.addEventListener("click", () => {
     for (let b of linkBalls) {
         if (b.hover) {
-            window.location.href = b.url;
+            window.open(b.url, "_blank", "noopener,noreferrer");
         }
     }
 });
@@ -237,5 +237,6 @@ loop();
 
 </body>
 </html>
+
 
 
