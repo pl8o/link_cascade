@@ -1,9 +1,10 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+<meta charset="UTF-8">
 <title>FALLING LINKS NAVIGATION</title>
+
 <style>
-    /* Remove default margins/padding and hide scrollbars */
     html, body {
         margin: 0;
         padding: 0;
@@ -13,15 +14,28 @@
     }
 
     canvas {
-        display: block; /* Make canvas fill its container */
+        display: block;
     }
 </style>
 </head>
+
 <body>
 
 <canvas id="canvas"></canvas>
 
 <script>
+// ======================================================
+// LINK DEFINITIONS (EDIT THESE)
+// ======================================================
+const LINKS = [
+    { title: "Home",      url: "https://example.com/home" },
+    { title: "About",     url: "https://example.com/about" },
+    { title: "Services",  url: "https://example.com/services" },
+    { title: "Portfolio", url: "https://example.com/portfolio" },
+    { title: "Blog",      url: "https://example.com/blog" },
+    { title: "Contact",   url: "https://example.com/contact" }
+];
+
 // ======================================================
 // 1. CANVAS SETUP
 // ======================================================
@@ -38,31 +52,31 @@ window.addEventListener("resize", resizeCanvas);
 // ======================================================
 // 2. SCREEN CONTEXT (MOBILE VS DESKTOP)
 // ======================================================
-const isMobile = window.innerWidth < 768; // Treat screens <768px as mobile
+const isMobile = window.innerWidth < 768;
 
 // ======================================================
 // 3. COLORS & COUNTS
 // ======================================================
 const SMALL_COLORS = ["blue", "yellow", "orange", "red", "purple", "green"];
-const LINK_COLORS = ["#00aaff", "#ffaa00", "#ff4444", "#aa66ff", "#44ff88", "#ffff44"];
+const LINK_COLORS  = ["#00aaff", "#ffaa00", "#ff4444", "#aa66ff", "#44ff88", "#ffff44"];
 
-const SMALL_COUNT = isMobile ? 80 : 150; // fewer background balls on mobile
-const LINK_COUNT = 6;
+const SMALL_COUNT = isMobile ? 80 : 150;
+const LINK_COUNT  = LINKS.length;
 
 // ======================================================
 // 4. MOBILE-SPECIFIC SIZING
 // ======================================================
-const LINK_RADIUS = isMobile ? 100 : 50;     // bigger link balls on mobile
-const FONT_SIZE = isMobile ? 32 : 16;        // bigger text
-const BASE_SPEED = isMobile ? 0.4 : 0.6;    // slightly slower on mobile
-const APPROACH_RADIUS = isMobile ? 220 : 120; // for hover slow-down
-const CLUSTER_SPACING = isMobile ? 150 : 80;  // vertical spacing between links at load
+const LINK_RADIUS     = isMobile ? 100 : 50;
+const FONT_SIZE       = isMobile ? 32  : 16;
+const BASE_SPEED      = isMobile ? 0.4 : 0.6;
+const APPROACH_RADIUS = isMobile ? 220 : 120;
+const CLUSTER_SPACING = isMobile ? 150 : 80;
 
 // ======================================================
 // 5. STATE CONTAINERS
 // ======================================================
 let smallBalls = [];
-let linkBalls = [];
+let linkBalls  = [];
 let mouse = { x: -9999, y: -9999 };
 
 // ======================================================
@@ -81,33 +95,32 @@ function createSmallBalls() {
 }
 
 // ======================================================
-// 7. CREATE LINK BALLS (CLUSTERED & RESPONSIVE)
+// 7. CREATE LINK BALLS
 // ======================================================
 function createLinkBalls() {
-    const firstLinkY = canvas.height * 0.25; // first link visible immediately
+    const firstLinkY = canvas.height * 0.25;
 
     for (let i = 0; i < LINK_COUNT; i++) {
-        // Place each link above the first one, so they cascade naturally
         const startY = firstLinkY - (LINK_COUNT - i - 1) * CLUSTER_SPACING;
 
         linkBalls.push({
-            label: `Link ${i + 1}`,
-            x: (canvas.width / (LINK_COUNT + 1)) * (i + 1), // evenly spaced horizontally
+            label: LINKS[i].title,
+            url: LINKS[i].url,
+            x: (canvas.width / (LINK_COUNT + 1)) * (i + 1),
             y: startY,
             radius: LINK_RADIUS,
             baseSpeed: BASE_SPEED,
             speed: BASE_SPEED,
-            color: LINK_COLORS[i],
-            hover: false,
-            url: "#"
+            color: LINK_COLORS[i % LINK_COLORS.length],
+            hover: false
         });
     }
 }
 
 // ======================================================
-// 8. MOUSE TRACKING (HOVER INTERACTION)
+// 8. MOUSE TRACKING
 // ======================================================
-canvas.addEventListener("mousemove", (e) => {
+canvas.addEventListener("mousemove", e => {
     const rect = canvas.getBoundingClientRect();
     mouse.x = e.clientX - rect.left;
     mouse.y = e.clientY - rect.top;
@@ -119,10 +132,9 @@ canvas.addEventListener("mouseleave", () => {
 });
 
 // ======================================================
-// 9. UPDATE BALLS (PHYSICS & INTERACTION)
+// 9. UPDATE BALLS
 // ======================================================
 function updateBalls() {
-    // --- Small background balls ---
     for (let b of smallBalls) {
         b.y += b.speed;
         if (b.y - b.radius > canvas.height) {
@@ -131,7 +143,6 @@ function updateBalls() {
         }
     }
 
-    // --- Link balls ---
     let hoveringAny = false;
 
     for (let b of linkBalls) {
@@ -139,12 +150,9 @@ function updateBalls() {
         const dy = mouse.y - b.y;
         const dist = Math.sqrt(dx * dx + dy * dy);
 
-        // Graceful slow-down near cursor
         if (dist < APPROACH_RADIUS) {
-            const factor = dist / APPROACH_RADIUS;
-            b.speed = b.baseSpeed * Math.max(0.1, factor);
+            b.speed = b.baseSpeed * Math.max(0.1, dist / APPROACH_RADIUS);
         } else {
-            // Ease back to base speed
             b.speed += (b.baseSpeed - b.speed) * 0.05;
         }
 
@@ -153,7 +161,6 @@ function updateBalls() {
 
         b.y += b.speed;
 
-        // Loop back to top
         if (b.y - b.radius > canvas.height) {
             b.y = -b.radius;
         }
@@ -163,12 +170,11 @@ function updateBalls() {
 }
 
 // ======================================================
-// 10. DRAW BALLS (VISUALIZATION)
+// 10. DRAW BALLS
 // ======================================================
 function drawBalls() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // --- Background balls ---
     for (let b of smallBalls) {
         ctx.beginPath();
         ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
@@ -176,11 +182,9 @@ function drawBalls() {
         ctx.fill();
     }
 
-    // --- Link balls ---
     for (let b of linkBalls) {
         ctx.save();
 
-        // Add subtle glow on hover
         if (b.hover) {
             ctx.shadowBlur = 30;
             ctx.shadowColor = b.color;
@@ -193,7 +197,6 @@ function drawBalls() {
 
         ctx.shadowBlur = 0;
 
-        // Draw label
         ctx.fillStyle = "black";
         ctx.font = `bold ${FONT_SIZE}px Arial`;
         ctx.textAlign = "center";
@@ -210,8 +213,7 @@ function drawBalls() {
 canvas.addEventListener("click", () => {
     for (let b of linkBalls) {
         if (b.hover) {
-            alert(`Clicked ${b.label}`);
-            // window.location.href = b.url;
+            window.location.href = b.url;
         }
     }
 });
@@ -231,7 +233,6 @@ function loop() {
 createSmallBalls();
 createLinkBalls();
 loop();
-
 </script>
 
 </body>
