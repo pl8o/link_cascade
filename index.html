@@ -1,29 +1,42 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>FALLING LINKS NAVIGATION</title>
+<title>Responsive Cascading Navigation</title>
+
 <style>
-    html, body {
-        margin: 0;
-        padding: 0;
-        overflow: hidden;
-        background: black;
-        font-family: Arial, sans-serif;
-    }
-    canvas {
-        display: block;
-    }
+/* 
+   We remove all default browser layout behavior.
+   The canvas becomes the entire visual universe.
+*/
+html, body {
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    background: black;
+    font-family: Arial, sans-serif;
+}
+
+canvas {
+    display: block;
+}
 </style>
 </head>
-<body>
 
+<body>
 <canvas id="canvas"></canvas>
 
 <script>
-// -------------------- SETUP --------------------
+// ======================================================
+// 1. CANVAS SETUP (FOUNDATION LAYER)
+// ======================================================
+
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
 
+/*
+  Canvas must be explicitly sized to match the screen.
+  This prevents blur and ensures pixel-accurate drawing.
+*/
 function resizeCanvas() {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
@@ -31,42 +44,78 @@ function resizeCanvas() {
 resizeCanvas();
 window.addEventListener("resize", resizeCanvas);
 
-// -------------------- CONSTANTS --------------------
+// ======================================================
+// 2. SCREEN CONTEXT (DESIGN DECISION POINT)
+// ======================================================
+
+/*
+  We decide ONCE whether we are on a mobile-sized screen.
+  Everything else scales from this truth.
+*/
+const isMobile = window.innerWidth < 768;
+
+// ======================================================
+// 3. GLOBAL DESIGN CONSTANTS (INTENT, NOT EFFECT)
+// ======================================================
+
+// Ambient background colors
 const SMALL_COLORS = ["blue", "yellow", "orange", "red", "purple", "green"];
-const LINK_COLORS = ["#00aaff", "#ffaa00", "#ff4444", "#aa66ff", "#44ff88", "#ffff44"];
+const LINK_COLORS  = ["#00aaff", "#ffaa00", "#ff4444", "#aa66ff", "#44ff88", "#ffff44"];
 
-const SMALL_COUNT = 150;
-const LINK_COUNT = 6;
-const APPROACH_RADIUS = 120;
+// Quantity
+const SMALL_COUNT = isMobile ? 80 : 150;
+const LINK_COUNT  = 6;
 
-// -------------------- STATE --------------------
+// --- SCALE VALUES ---
+// These are where mobile gets its visual power
+const LINK_RADIUS = isMobile ? 100 : 50;     // 2× size on mobile
+const FONT_SIZE   = isMobile ? 32  : 16;     // 2× text size
+const BASE_SPEED  = isMobile ? 0.4 : 0.6;    // Slightly calmer on mobile
+const APPROACH_RADIUS = isMobile ? 220 : 120;
+
+// ======================================================
+// 4. STATE CONTAINERS (DATA, NOT DRAWING)
+// ======================================================
+
 let smallBalls = [];
-let linkBalls = [];
+let linkBalls  = [];
 let mouse = { x: -9999, y: -9999 };
 
-// -------------------- CREATE SMALL BALLS --------------------
+// ======================================================
+// 5. CREATE BACKGROUND AMBIENCE
+// ======================================================
+
 function createSmallBalls() {
     while (smallBalls.length < SMALL_COUNT) {
         smallBalls.push({
             x: Math.random() * canvas.width,
             y: Math.random() * canvas.height,
-            radius: 6 + Math.random() * 8,
-            speed: 2 + Math.random() * 3,
+            radius: 4 + Math.random() * 8,
+            speed: 1 + Math.random() * 3,
             color: SMALL_COLORS[Math.floor(Math.random() * SMALL_COLORS.length)]
         });
     }
 }
 
-// -------------------- CREATE LINK BALLS --------------------
+// ======================================================
+// 6. CREATE NAVIGATION OBJECTS (LINK BALLS)
+// ======================================================
+
 function createLinkBalls() {
     for (let i = 0; i < LINK_COUNT; i++) {
         linkBalls.push({
             label: `Link ${i + 1}`,
+
+            // Even horizontal distribution
             x: (canvas.width / (LINK_COUNT + 1)) * (i + 1),
+
+            // Staggered vertical start
             y: -Math.random() * canvas.height,
-            radius: 50,
-            baseSpeed: 0.6,
-            speed: 0.6,
+
+            radius: LINK_RADIUS,
+            baseSpeed: BASE_SPEED,
+            speed: BASE_SPEED,
+
             color: LINK_COLORS[i],
             hover: false,
             url: "#"
@@ -74,21 +123,27 @@ function createLinkBalls() {
     }
 }
 
-// -------------------- MOUSE TRACKING --------------------
-canvas.addEventListener("mousemove", (e) => {
+// ======================================================
+// 7. INPUT TRACKING (HUMAN INTENT)
+// ======================================================
+
+canvas.addEventListener("mousemove", e => {
     const rect = canvas.getBoundingClientRect();
     mouse.x = e.clientX - rect.left;
     mouse.y = e.clientY - rect.top;
 });
 
 canvas.addEventListener("mouseleave", () => {
-    mouse.x = -9999;
-    mouse.y = -9999;
+    mouse.x = mouse.y = -9999;
 });
 
-// -------------------- UPDATE --------------------
-function updateBalls() {
-    // small balls
+// ======================================================
+// 8. UPDATE LOOP (TIME & PHYSICS)
+// ======================================================
+
+function update() {
+
+    // --- Ambient motion ---
     for (let b of smallBalls) {
         b.y += b.speed;
         if (b.y - b.radius > canvas.height) {
@@ -97,42 +152,47 @@ function updateBalls() {
         }
     }
 
-    // link balls
-    let hoveringAny = false;
+    // --- Navigation logic ---
+    let hovering = false;
 
     for (let b of linkBalls) {
+
+        // Distance from pointer
         const dx = mouse.x - b.x;
         const dy = mouse.y - b.y;
         const dist = Math.sqrt(dx * dx + dy * dy);
 
-        // graceful slow-down near mouse
+        // Graceful slow-down near user
         if (dist < APPROACH_RADIUS) {
             const factor = dist / APPROACH_RADIUS;
             b.speed = b.baseSpeed * Math.max(0.1, factor);
         } else {
-            // ease back to normal speed
+            // Ease back to normal speed
             b.speed += (b.baseSpeed - b.speed) * 0.05;
         }
 
-        // hover state (inside circle)
         b.hover = dist < b.radius;
-        if (b.hover) hoveringAny = true;
+        if (b.hover) hovering = true;
 
         b.y += b.speed;
 
+        // Loop back to top
         if (b.y - b.radius > canvas.height) {
             b.y = -b.radius;
         }
     }
 
-    canvas.style.cursor = hoveringAny ? "pointer" : "default";
+    canvas.style.cursor = hovering ? "pointer" : "default";
 }
 
-// -------------------- DRAW --------------------
-function drawBalls() {
+// ======================================================
+// 9. DRAW LOOP (VISUALIZATION ONLY)
+// ======================================================
+
+function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // small background balls
+    // Background
     for (let b of smallBalls) {
         ctx.beginPath();
         ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
@@ -140,12 +200,12 @@ function drawBalls() {
         ctx.fill();
     }
 
-    // link balls
+    // Navigation
     for (let b of linkBalls) {
         ctx.save();
 
         if (b.hover) {
-            ctx.shadowBlur = 20;
+            ctx.shadowBlur = 30;
             ctx.shadowColor = b.color;
         }
 
@@ -155,9 +215,8 @@ function drawBalls() {
         ctx.fill();
 
         ctx.shadowBlur = 0;
-
         ctx.fillStyle = "black";
-        ctx.font = "bold 16px Arial";
+        ctx.font = `bold ${FONT_SIZE}px Arial`;
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
         ctx.fillText(b.label, b.x, b.y);
@@ -166,24 +225,20 @@ function drawBalls() {
     }
 }
 
-// -------------------- CLICK --------------------
-canvas.addEventListener("click", () => {
-    for (let b of linkBalls) {
-        if (b.hover) {
-            alert(`Clicked ${b.label}`);
-            // window.location.href = b.url;
-        }
-    }
-});
+// ======================================================
+// 10. LIFE LOOP
+// ======================================================
 
-// -------------------- LOOP --------------------
 function loop() {
-    updateBalls();
-    drawBalls();
+    update();
+    draw();
     requestAnimationFrame(loop);
 }
 
-// -------------------- INIT --------------------
+// ======================================================
+// 11. INITIALIZATION
+// ======================================================
+
 createSmallBalls();
 createLinkBalls();
 loop();
@@ -191,4 +246,5 @@ loop();
 
 </body>
 </html>
+
 
