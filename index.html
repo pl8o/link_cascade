@@ -3,6 +3,7 @@
 <head>
 <title>FALLING LINKS NAVIGATION</title>
 <style>
+    /* Remove default margins/padding and hide scrollbars */
     html, body {
         margin: 0;
         padding: 0;
@@ -10,8 +11,9 @@
         background: black;
         font-family: Arial, sans-serif;
     }
+
     canvas {
-        display: block;
+        display: block; /* Make canvas fill its container */
     }
 </style>
 </head>
@@ -20,7 +22,9 @@
 <canvas id="canvas"></canvas>
 
 <script>
-// -------------------- SETUP --------------------
+// ======================================================
+// 1. CANVAS SETUP
+// ======================================================
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
 
@@ -31,57 +35,68 @@ function resizeCanvas() {
 resizeCanvas();
 window.addEventListener("resize", resizeCanvas);
 
-// -------------------- CONSTANTS --------------------
+// ======================================================
+// 2. SCREEN CONTEXT (MOBILE VS DESKTOP)
+// ======================================================
+const isMobile = window.innerWidth < 768; // Treat screens <768px as mobile
+
+// ======================================================
+// 3. COLORS & COUNTS
+// ======================================================
 const SMALL_COLORS = ["blue", "yellow", "orange", "red", "purple", "green"];
 const LINK_COLORS = ["#00aaff", "#ffaa00", "#ff4444", "#aa66ff", "#44ff88", "#ffff44"];
 
-const SMALL_COUNT = 150;
+const SMALL_COUNT = isMobile ? 80 : 150; // fewer background balls on mobile
 const LINK_COUNT = 6;
-const APPROACH_RADIUS = 120;
 
-// -------------------- STATE --------------------
+// ======================================================
+// 4. MOBILE-SPECIFIC SIZING
+// ======================================================
+const LINK_RADIUS = isMobile ? 100 : 50;     // bigger link balls on mobile
+const FONT_SIZE = isMobile ? 32 : 16;        // bigger text
+const BASE_SPEED = isMobile ? 0.4 : 0.6;    // slightly slower on mobile
+const APPROACH_RADIUS = isMobile ? 220 : 120; // for hover slow-down
+const CLUSTER_SPACING = isMobile ? 150 : 80;  // vertical spacing between links at load
+
+// ======================================================
+// 5. STATE CONTAINERS
+// ======================================================
 let smallBalls = [];
 let linkBalls = [];
 let mouse = { x: -9999, y: -9999 };
 
-// -------------------- CREATE SMALL BALLS --------------------
+// ======================================================
+// 6. CREATE SMALL BACKGROUND BALLS
+// ======================================================
 function createSmallBalls() {
     while (smallBalls.length < SMALL_COUNT) {
         smallBalls.push({
             x: Math.random() * canvas.width,
             y: Math.random() * canvas.height,
-            radius: 6 + Math.random() * 8,
-            speed: 2 + Math.random() * 3,
+            radius: 4 + Math.random() * 8,
+            speed: 1 + Math.random() * 3,
             color: SMALL_COLORS[Math.floor(Math.random() * SMALL_COLORS.length)]
         });
     }
 }
 
-// -------------------- CREATE LINK BALLS --------------------
-// -------------------- CREATE LINK BALLS --------------------
+// ======================================================
+// 7. CREATE LINK BALLS (CLUSTERED & RESPONSIVE)
+// ======================================================
 function createLinkBalls() {
-    for (let i = 0; i < LINK_COUNT; i++) {
+    const firstLinkY = canvas.height * 0.25; // first link visible immediately
 
-        // Decide starting Y position:
-        // • First link appears immediately (inside viewport)
-        // • Remaining links start above the screen as before
-        const startY = (i === 0)
-            ? canvas.height * 0.25   // visible on load (top quarter)
-            : -Math.random() * canvas.height;
+    for (let i = 0; i < LINK_COUNT; i++) {
+        // Place each link above the first one, so they cascade naturally
+        const startY = firstLinkY - (LINK_COUNT - i - 1) * CLUSTER_SPACING;
 
         linkBalls.push({
             label: `Link ${i + 1}`,
-
-            // Even horizontal spacing across the screen
-            x: (canvas.width / (LINK_COUNT + 1)) * (i + 1),
-
-            // Carefully chosen starting Y
+            x: (canvas.width / (LINK_COUNT + 1)) * (i + 1), // evenly spaced horizontally
             y: startY,
-
-            radius: 50,
-            baseSpeed: 0.6,
-            speed: 0.6,
-
+            radius: LINK_RADIUS,
+            baseSpeed: BASE_SPEED,
+            speed: BASE_SPEED,
             color: LINK_COLORS[i],
             hover: false,
             url: "#"
@@ -89,7 +104,9 @@ function createLinkBalls() {
     }
 }
 
-// -------------------- MOUSE TRACKING --------------------
+// ======================================================
+// 8. MOUSE TRACKING (HOVER INTERACTION)
+// ======================================================
 canvas.addEventListener("mousemove", (e) => {
     const rect = canvas.getBoundingClientRect();
     mouse.x = e.clientX - rect.left;
@@ -101,9 +118,11 @@ canvas.addEventListener("mouseleave", () => {
     mouse.y = -9999;
 });
 
-// -------------------- UPDATE --------------------
+// ======================================================
+// 9. UPDATE BALLS (PHYSICS & INTERACTION)
+// ======================================================
 function updateBalls() {
-    // small balls
+    // --- Small background balls ---
     for (let b of smallBalls) {
         b.y += b.speed;
         if (b.y - b.radius > canvas.height) {
@@ -112,7 +131,7 @@ function updateBalls() {
         }
     }
 
-    // link balls
+    // --- Link balls ---
     let hoveringAny = false;
 
     for (let b of linkBalls) {
@@ -120,21 +139,21 @@ function updateBalls() {
         const dy = mouse.y - b.y;
         const dist = Math.sqrt(dx * dx + dy * dy);
 
-        // graceful slow-down near mouse
+        // Graceful slow-down near cursor
         if (dist < APPROACH_RADIUS) {
             const factor = dist / APPROACH_RADIUS;
             b.speed = b.baseSpeed * Math.max(0.1, factor);
         } else {
-            // ease back to normal speed
+            // Ease back to base speed
             b.speed += (b.baseSpeed - b.speed) * 0.05;
         }
 
-        // hover state (inside circle)
         b.hover = dist < b.radius;
         if (b.hover) hoveringAny = true;
 
         b.y += b.speed;
 
+        // Loop back to top
         if (b.y - b.radius > canvas.height) {
             b.y = -b.radius;
         }
@@ -143,11 +162,13 @@ function updateBalls() {
     canvas.style.cursor = hoveringAny ? "pointer" : "default";
 }
 
-// -------------------- DRAW --------------------
+// ======================================================
+// 10. DRAW BALLS (VISUALIZATION)
+// ======================================================
 function drawBalls() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // small background balls
+    // --- Background balls ---
     for (let b of smallBalls) {
         ctx.beginPath();
         ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
@@ -155,12 +176,13 @@ function drawBalls() {
         ctx.fill();
     }
 
-    // link balls
+    // --- Link balls ---
     for (let b of linkBalls) {
         ctx.save();
 
+        // Add subtle glow on hover
         if (b.hover) {
-            ctx.shadowBlur = 20;
+            ctx.shadowBlur = 30;
             ctx.shadowColor = b.color;
         }
 
@@ -171,8 +193,9 @@ function drawBalls() {
 
         ctx.shadowBlur = 0;
 
+        // Draw label
         ctx.fillStyle = "black";
-        ctx.font = "bold 16px Arial";
+        ctx.font = `bold ${FONT_SIZE}px Arial`;
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
         ctx.fillText(b.label, b.x, b.y);
@@ -181,7 +204,9 @@ function drawBalls() {
     }
 }
 
-// -------------------- CLICK --------------------
+// ======================================================
+// 11. CLICK HANDLER
+// ======================================================
 canvas.addEventListener("click", () => {
     for (let b of linkBalls) {
         if (b.hover) {
@@ -191,17 +216,22 @@ canvas.addEventListener("click", () => {
     }
 });
 
-// -------------------- LOOP --------------------
+// ======================================================
+// 12. ANIMATION LOOP
+// ======================================================
 function loop() {
     updateBalls();
     drawBalls();
     requestAnimationFrame(loop);
 }
 
-// -------------------- INIT --------------------
+// ======================================================
+// 13. INITIALIZATION
+// ======================================================
 createSmallBalls();
 createLinkBalls();
 loop();
+
 </script>
 
 </body>
