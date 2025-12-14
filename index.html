@@ -58,15 +58,30 @@ function createSmallBalls() {
 }
 
 // -------------------- CREATE LINK BALLS --------------------
+// -------------------- CREATE LINK BALLS --------------------
 function createLinkBalls() {
     for (let i = 0; i < LINK_COUNT; i++) {
+
+        // Decide starting Y position:
+        // • First link appears immediately (inside viewport)
+        // • Remaining links start above the screen as before
+        const startY = (i === 0)
+            ? canvas.height * 0.25   // visible on load (top quarter)
+            : -Math.random() * canvas.height;
+
         linkBalls.push({
             label: `Link ${i + 1}`,
+
+            // Even horizontal spacing across the screen
             x: (canvas.width / (LINK_COUNT + 1)) * (i + 1),
-            y: -Math.random() * canvas.height,
+
+            // Carefully chosen starting Y
+            y: startY,
+
             radius: 50,
             baseSpeed: 0.6,
             speed: 0.6,
+
             color: LINK_COLORS[i],
             hover: false,
             url: "#"
